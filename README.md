@@ -56,6 +56,26 @@ npm run client
 npm run client -- --url http://127.0.0.1:10000 "hello"
 ```
 
+### 异步推送模式
+
+同步命令 `npm run client` 使用 `sendMessageStream` 在同一条请求连接上消费 A2A 事件。
+如果需要由 Server 后台处理并通过 push notification 回调 Client，可以使用异步入口：
+
+```bash
+npm run client:async -- "用三句话解释 A2A 协议"
+```
+
+异步入口会在本地启动 push webhook，并在发送请求时附带
+`taskPushNotificationConfig` 与 `returnImmediately: true`。默认回调地址为
+`http://127.0.0.1:10001/a2a/push`，可通过以下环境变量调整：
+
+```bash
+A2A_PUSH_HOST=127.0.0.1
+A2A_PUSH_PORT=10001
+A2A_PUSH_PUBLIC_URL=http://127.0.0.1:10001
+A2A_PUSH_TIMEOUT_MS=120000
+```
+
 ## 本地验证
 
 ```bash
@@ -93,8 +113,10 @@ src/
   langgraph-executor.ts   LangGraph 到 A2A task lifecycle 的适配
   server.ts               Agent Card 与 A2A Express Server
   client.ts               可复用的底层 A2A Client transport
+  async-client.ts         A2A push notification 异步接入封装
   server-entry.ts         Server CLI 入口
   client-entry.ts         单次/交互式 Client 入口
+  client-async-entry.ts   单次/交互式异步 Client 入口
 tests/
   a2a-integration.test.ts  真实本地协议闭环测试
 ```

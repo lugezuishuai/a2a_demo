@@ -14,6 +14,7 @@ import { ToolNode, toolsCondition } from "@langchain/langgraph/prebuilt";
 import { z } from "zod";
 
 import type { A2AResult } from "./client.js";
+import { extractLangChainStreamText } from "./langchain-stream-helpers.js";
 
 export interface ServerAgentClient {
   send(prompt: string, contextId?: string): Promise<A2AResult>;
@@ -49,11 +50,7 @@ export class ClientAgent {
    * @param signal - 可选取消信号，会透传给 LangGraph 调用。
    * @returns Client Agent 的最终回答和委派标记。
    */
-  async respond(
-    prompt: string,
-    contextId: string,
-    signal?: AbortSignal,
-  ): Promise<ClientAgentResult> {
+  async respond(prompt: string, contextId: string, signal?: AbortSignal): Promise<ClientAgentResult> {
     // thread_id 让同一 Client 会话在 MemorySaver 中复用历史消息。
     const result = await this.graph.invoke(
       { messages: [new HumanMessage(prompt)] },
@@ -70,6 +67,36 @@ export class ClientAgent {
       delegated: result.messages.some(ToolMessage.isInstance),
     };
   }
+
+  /**
+   * 流式处理一轮用户请求，并逐步返回 Client Agent 的可见文本输出。
+   *
+   * @param prompt - 当前用户请求。
+   * @param contextId - Client Agent 多轮会话标识。
+   * @param signal - 可选取消信号，会透传给 LangGraph 调用。
+   * @yields Client Agent 最终回答的文本片段。
+   */
+  async *stream(prompt: string, contextId: string, signal?: AbortSignal): AsyncGenerator<string> {
+    const stream = await this.graph.stream(
+      { messages: [new HumanMessage(prompt)] },
+      {
+        configurable: { thread_id: contextId },
+        streamMode: "messages",
+        ...(signal ? { signal } : {}),
+      },
+    );
+    let hasTextChunk = false;
+
+    // 工具调用 chunk 可能没有可见文本；仅把真正的文本片段返回给上层调用方。
+    for await (const chunk of stream) {
+      const text = extractLangChainStreamText(chunk);
+      if (!text) continue;
+      hasTextChunk = true;
+      yield text;
+    }
+
+    if (!hasTextChunk) throw new Error("The Client Agent returned an empty response stream");
+  }
 }
 
 /**
@@ -80,11 +107,7 @@ export class ClientAgent {
  * @param systemPrompt - 约束 Client Agent 路由行为的系统提示词。
  * @returns 已启用会话记忆的可执行 LangGraph。
  */
-function buildClientAgentGraph(
-  model: BaseChatModel,
-  serverClient: ServerAgentClient,
-  systemPrompt: string,
-) {
+function buildClientAgentGraph(model: BaseChatModel, serverClient: ServerAgentClient, systemPrompt: string) {
   // 为每个 Client 会话保存一个远端 A2A contextId，避免多轮上下文串线。
   const remoteContexts = new Map<string, string>();
   const delegateToServerAgent = tool(
@@ -132,14 +155,8 @@ function buildClientAgentGraph(
    * @param runnableConfig - LangGraph 运行配置及取消信号。
    * @returns 新增到消息状态的模型响应。
    */
-  const callModel = async (
-    state: typeof MessagesAnnotation.State,
-    runnableConfig?: LangGraphRunnableConfig,
-  ) => {
-    const response = await modelWithTools.invoke(
-      [new SystemMessage(systemPrompt), ...state.messages],
-      runnableConfig,
-    );
+  const callModel = async (state: typeof MessagesAnnotation.State, runnableConfig?: LangGraphRunnableConfig) => {
+    const response = await modelWithTools.invoke([new SystemMessage(systemPrompt), ...state.messages], runnableConfig);
     return { messages: [response] };
   };
 

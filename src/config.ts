@@ -6,7 +6,7 @@ import { z } from "zod";
 const providerSchema = z
   .enum(["openai", "gpt", "deepseek", "anthropic", "claude"])
   .default("openai")
-  .transform((provider) => {
+  .transform(provider => {
     if (provider === "gpt") return "openai" as const;
     if (provider === "claude") return "anthropic" as const;
     return provider;
@@ -14,7 +14,7 @@ const providerSchema = z
 
 // 空字符串在 .env 中表示未配置，因此在 URL 校验前转换为 undefined。
 const optionalUrl = z.preprocess(
-  (value) => (value === "" || value === undefined ? undefined : value),
+  value => (value === "" || value === undefined ? undefined : value),
   z.url().optional(),
 );
 
@@ -27,10 +27,7 @@ const environmentSchema = z.object({
   MAX_TOKENS: z.coerce.number().int().positive().optional(),
   MODEL_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
   MODEL_MAX_RETRIES: z.coerce.number().int().nonnegative().default(2),
-  SYSTEM_PROMPT: z
-    .string()
-    .min(1)
-    .default("You are a helpful assistant exposed through the A2A protocol."),
+  SYSTEM_PROMPT: z.string().min(1).default("You are a helpful assistant exposed through the A2A protocol."),
   CLIENT_SYSTEM_PROMPT: z
     .string()
     .min(1)
@@ -41,6 +38,10 @@ const environmentSchema = z.object({
   SERVER_PORT: z.coerce.number().int().min(0).max(65_535).default(10_000),
   A2A_PUBLIC_URL: optionalUrl,
   A2A_SERVER_URL: z.url().default("http://127.0.0.1:10000"),
+  A2A_PUSH_HOST: z.string().min(1).default("127.0.0.1"),
+  A2A_PUSH_PORT: z.coerce.number().int().min(0).max(65_535).default(10_001),
+  A2A_PUSH_PUBLIC_URL: optionalUrl,
+  A2A_PUSH_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
   OPENAI_API_KEY: z.string().min(1).optional(),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
@@ -64,6 +65,10 @@ export interface AppConfig {
   serverPort: number;
   publicUrl: string;
   serverUrl: string;
+  pushHost: string;
+  pushPort: number;
+  pushPublicUrl: string;
+  pushTimeoutMs: number;
   logLevel: "error" | "warn" | "info" | "debug";
 }
 
@@ -78,10 +83,7 @@ export interface LoadConfigOptions {
  * @param options - 控制是否必须提供模型 API Key 的加载选项。
  * @returns 供 Client、Server 与模型工厂使用的标准化应用配置。
  */
-export function loadConfig(
-  environment: NodeJS.ProcessEnv = process.env,
-  options: LoadConfigOptions = {},
-): AppConfig {
+export function loadConfig(environment: NodeJS.ProcessEnv = process.env, options: LoadConfigOptions = {}): AppConfig {
   // 先利用 Zod 处理默认值、类型转换与合法性校验。
   const parsed = environmentSchema.parse(environment);
   const apiKey = resolveApiKey(parsed);
@@ -93,8 +95,10 @@ export function loadConfig(
   }
 
   // 对外地址允许覆盖监听地址，适配反向代理或容器部署场景。
-  const publicUrl = (
-    parsed.A2A_PUBLIC_URL ?? `http://${parsed.SERVER_HOST}:${parsed.SERVER_PORT}`
+  const publicUrl = (parsed.A2A_PUBLIC_URL ?? `http://${parsed.SERVER_HOST}:${parsed.SERVER_PORT}`).replace(/\/$/, "");
+  // Push 回调地址需要能被 Server 访问；默认复用本机监听地址，部署时可显式覆盖公开地址。
+  const pushPublicUrl = (
+    parsed.A2A_PUSH_PUBLIC_URL ?? `http://${parsed.A2A_PUSH_HOST}:${parsed.A2A_PUSH_PORT}`
   ).replace(/\/$/, "");
 
   return {
@@ -112,6 +116,10 @@ export function loadConfig(
     serverPort: parsed.SERVER_PORT,
     publicUrl,
     serverUrl: parsed.A2A_SERVER_URL.replace(/\/$/, ""),
+    pushHost: parsed.A2A_PUSH_HOST,
+    pushPort: parsed.A2A_PUSH_PORT,
+    pushPublicUrl,
+    pushTimeoutMs: parsed.A2A_PUSH_TIMEOUT_MS,
     logLevel: parsed.LOG_LEVEL,
   };
 }

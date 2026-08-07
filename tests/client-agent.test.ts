@@ -29,7 +29,10 @@ describe("ClientAgent", () => {
     const result = await agent.respond("Please analyze this architecture", "client-context-1");
 
     expect(send).toHaveBeenCalledWith("Analyze the A2A architecture", undefined);
-    expect(result).toEqual({ text: "response from Server Agent", delegated: true });
+    expect(result).toEqual({
+      text: "response from Server Agent",
+      delegated: true,
+    });
   });
 
   it("answers locally when semantic routing does not request the A2A tool", async () => {
@@ -40,17 +43,42 @@ describe("ClientAgent", () => {
     const result = await agent.respond("hello", "client-context-2");
 
     expect(send).not.toHaveBeenCalled();
-    expect(result).toEqual({ text: "Hello! How can I help?", delegated: false });
+    expect(result).toEqual({
+      text: "Hello! How can I help?",
+      delegated: false,
+    });
+  });
+
+  it("streams a local Client Agent answer", async () => {
+    const model = fakeModel().respond(new AIMessage("streamed local answer"));
+    const send = vi.fn<ServerAgentClient["send"]>();
+    const agent = new ClientAgent(model, { send }, "Route by user intent.");
+    const chunks: string[] = [];
+
+    for await (const chunk of agent.stream("hello", "client-context-stream")) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks.join("")).toBe("streamed local answer");
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("reuses the remote A2A context for the same Client Agent conversation", async () => {
     const model = fakeModel()
       .respondWithTools([
-        { name: "delegate_to_server_agent", args: { request: "first" }, id: "call-1" },
+        {
+          name: "delegate_to_server_agent",
+          args: { request: "first" },
+          id: "call-1",
+        },
       ])
       .respond(new AIMessage("first answer"))
       .respondWithTools([
-        { name: "delegate_to_server_agent", args: { request: "follow-up" }, id: "call-2" },
+        {
+          name: "delegate_to_server_agent",
+          args: { request: "follow-up" },
+          id: "call-2",
+        },
       ])
       .respond(new AIMessage("second answer"));
     const send = vi

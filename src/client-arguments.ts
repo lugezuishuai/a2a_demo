@@ -24,19 +24,14 @@ export function readClientArguments(argv: readonly string[] = process.argv): str
  * @param defaultServerUrl - 未传入 --url 时使用的默认 A2A Server 地址。
  * @returns Client 运行所需的 Server 地址和可选初始请求文本。
  */
-export function parseClientArguments(
-  args: readonly string[],
-  defaultServerUrl: string,
-): ClientArguments {
+export function parseClientArguments(args: readonly string[], defaultServerUrl: string): ClientArguments {
   // 将 --url 后的值作为目标地址，其余位置参数组合为用户请求。
   const urlIndex = args.indexOf("--url");
   const configuredServerUrl = urlIndex >= 0 ? args[urlIndex + 1] : defaultServerUrl;
   if (!configuredServerUrl) throw new Error("--url requires a value");
 
   const promptArgs =
-    urlIndex >= 0
-      ? args.filter((_value, index) => index !== urlIndex && index !== urlIndex + 1)
-      : args;
+    urlIndex >= 0 ? args.filter((_value, index) => index !== urlIndex && index !== urlIndex + 1) : args;
 
   return {
     serverUrl: configuredServerUrl,
@@ -48,8 +43,8 @@ export function parseClientArguments(
  * 判断 argv 中的值是否为 Client CLI 的入口文件路径。
  *
  * @param value - 待识别的 argv 值。
- * @returns 值是否指向 client-entry.* 文件。
+ * @returns 值是否指向同步或异步 Client CLI 的入口文件。
  */
 function isClientEntryPath(value: string): boolean {
-  return basename(value).startsWith("client-entry.");
+  return ["client-entry", "client-async-entry"].some(entryName => basename(value).startsWith(`${entryName}.`));
 }

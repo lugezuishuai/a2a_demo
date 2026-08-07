@@ -6,33 +6,73 @@
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--import", "tsx"],
+      "runtimeArgs": [
+        "--import",
+        "tsx"
+      ],
       "program": "${workspaceFolder}/src/server-entry.ts",
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env",
       "console": "integratedTerminal",
       "sourceMaps": true,
-      "skipFiles": ["<node_internals>/**"]
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
     },
     {
       "name": "A2A: Debug Client",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--import", "tsx"],
+      "runtimeArgs": [
+        "--import",
+        "tsx"
+      ],
       "program": "${workspaceFolder}/src/client-entry.ts",
       "preLaunchTask": "A2A: Wait for Server",
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env",
       "console": "integratedTerminal",
       "sourceMaps": true,
-      "skipFiles": ["<node_internals>/**"]
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "A2A: Debug Async Client",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--import",
+        "tsx"
+      ],
+      "program": "${workspaceFolder}/src/client-async-entry.ts",
+      "preLaunchTask": "A2A: Wait for Server",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
     }
   ],
   "compounds": [
     {
       "name": "A2A: Debug Client + Server",
-      "configurations": ["A2A: Debug Server", "A2A: Debug Client"],
+      "configurations": [
+        "A2A: Debug Server",
+        "A2A: Debug Client"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "A2A: Debug Async Client + Server",
+      "configurations": [
+        "A2A: Debug Server",
+        "A2A: Debug Async Client"
+      ],
       "stopAll": true
     }
   ]

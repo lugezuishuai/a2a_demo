@@ -2,27 +2,37 @@ import { createInterface } from "node:readline/promises";
 import { randomUUID } from "node:crypto";
 import { stdin, stdout } from "node:process";
 
+import { startA2AAsyncDemoClient } from "./async-client.js";
 import { ClientAgent } from "./client-agent.js";
-import { A2ADemoClient } from "./client.js";
 import { parseClientArguments, readClientArguments } from "./client-arguments.js";
 import { loadConfig } from "./config.js";
 import { createChatModel } from "./model-factory.js";
 
-// 启动时一次性创建配置、模型和 Client Agent，交互轮次共享同一个 Agent 实例。
+// 异步入口复用 Client Agent，只将底层 A2A 接入方式替换为 push notification。
 const config = loadConfig();
 const args = readClientArguments();
 const { serverUrl, initialPrompt } = parseClientArguments(args, config.serverUrl);
-const clientAgent = new ClientAgent(createChatModel(config), new A2ADemoClient(serverUrl), config.clientSystemPrompt);
+const asyncRuntime = await startA2AAsyncDemoClient(serverUrl, config.pushHost, config.pushPort, {
+  callbackUrl: `${config.pushPublicUrl}/a2a/push`,
+  timeoutMs: config.pushTimeoutMs,
+});
+const clientAgent = new ClientAgent(createChatModel(config), asyncRuntime.client, config.clientSystemPrompt);
 
-// 传入位置参数时执行单轮；没有参数时进入可连续发送指令的交互模式。
-if (initialPrompt) {
-  await runTurn(initialPrompt);
-} else {
-  await runInteractive();
+console.log(`A2A async push webhook: ${asyncRuntime.callbackUrl}`);
+
+try {
+  // 传入位置参数时执行单轮；没有参数时进入可连续发送指令的交互模式。
+  if (initialPrompt) {
+    await runTurn(initialPrompt);
+  } else {
+    await runInteractive();
+  }
+} finally {
+  await asyncRuntime.close();
 }
 
 /**
- * 执行一轮 Client Agent 对话并打印路由结果与最终回答。
+ * 执行一轮 Client Agent 对话，并通过 A2A push notification 等待 Server Agent 结果。
  *
  * @param prompt - 当前用户输入。
  * @param contextId - Client Agent 会话标识；首次调用时自动生成。
@@ -30,7 +40,7 @@ if (initialPrompt) {
  */
 async function runTurn(prompt: string, contextId: string = randomUUID()): Promise<string> {
   const result = await clientAgent.respond(prompt, contextId);
-  console.log(`[route] ${result.delegated ? "Server Agent via A2A" : "Client Agent local"}`);
+  console.log(`[route] ${result.delegated ? "Server Agent via A2A push" : "Client Agent local"}`);
   console.log(`assistant > ${result.text}`);
   return contextId;
 }

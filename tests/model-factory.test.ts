@@ -18,6 +18,10 @@ const baseConfig: AppConfig = {
   serverPort: 10_000,
   publicUrl: "http://127.0.0.1:10000",
   serverUrl: "http://127.0.0.1:10000",
+  pushHost: "127.0.0.1",
+  pushPort: 10_001,
+  pushPublicUrl: "http://127.0.0.1:10001",
+  pushTimeoutMs: 120_000,
   logLevel: "error",
 };
 
@@ -25,7 +29,11 @@ describe("createChatModel", () => {
   it("uses ChatOpenAI for OpenAI and DeepSeek", () => {
     expect(createChatModel(baseConfig)).toBeInstanceOf(ChatOpenAI);
     expect(
-      createChatModel({ ...baseConfig, modelProvider: "deepseek", model: "deepseek-chat" }),
+      createChatModel({
+        ...baseConfig,
+        modelProvider: "deepseek",
+        model: "deepseek-chat",
+      }),
     ).toBeInstanceOf(ChatOpenAI);
   });
 

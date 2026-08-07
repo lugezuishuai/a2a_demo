@@ -25,11 +25,7 @@ export function textPart(text: string): Part {
  * @param contextId - 当前 A2A 会话上下文标识。
  * @returns 带有唯一 messageId 的 Agent 消息。
  */
-export function agentMessage(
-  text: string,
-  taskId: string,
-  contextId: string,
-): Message {
+export function agentMessage(text: string, taskId: string, contextId: string): Message {
   return {
     messageId: randomUUID(),
     role: Role.ROLE_AGENT,
@@ -50,8 +46,8 @@ export function agentMessage(
  */
 export function extractMessageText(message: Message): string {
   return message.parts
-    .filter((part) => part.content?.$case === "text")
-    .map((part) => (part.content?.$case === "text" ? part.content.value : ""))
+    .filter(part => part.content?.$case === "text")
+    .map(part => (part.content?.$case === "text" ? part.content.value : ""))
     .join("\n");
 }
 
@@ -63,7 +59,7 @@ export function extractMessageText(message: Message): string {
  */
 export function extractPartsText(parts: Part[]): string {
   return parts
-    .filter((part) => part.content?.$case === "text")
-    .map((part) => (part.content?.$case === "text" ? part.content.value : ""))
+    .filter(part => part.content?.$case === "text")
+    .map(part => (part.content?.$case === "text" ? part.content.value : ""))
     .join("\n");
 }

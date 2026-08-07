@@ -10,15 +10,15 @@ describe("loadConfig", () => {
     ["anthropic", "anthropic"],
     ["claude", "anthropic"],
   ])("normalizes %s to %s", (configured, expected) => {
-    const config = loadConfig(
-      { MODEL_PROVIDER: configured, API_KEY: "test-key" },
-      { requireApiKey: true },
-    );
+    const config = loadConfig({ MODEL_PROVIDER: configured, API_KEY: "test-key" }, { requireApiKey: true });
     expect(config.modelProvider).toBe(expected);
   });
 
   it("accepts a provider-specific key", () => {
-    const config = loadConfig({ MODEL_PROVIDER: "claude", ANTHROPIC_API_KEY: "secret" });
+    const config = loadConfig({
+      MODEL_PROVIDER: "claude",
+      ANTHROPIC_API_KEY: "secret",
+    });
     expect(config.apiKey).toBe("secret");
   });
 

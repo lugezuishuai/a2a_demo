@@ -4,9 +4,11 @@ import { parseClientArguments, readClientArguments } from "../src/client-argumen
 
 describe("readClientArguments", () => {
   it("reads standard Node script arguments", () => {
-    expect(readClientArguments(["node", "/repo/src/client-entry.ts", "hello"])).toEqual([
-      "hello",
-    ]);
+    expect(readClientArguments(["node", "/repo/src/client-entry.ts", "hello"])).toEqual(["hello"]);
+  });
+
+  it("reads async client script arguments", () => {
+    expect(readClientArguments(["node", "/repo/src/client-async-entry.ts", "hello"])).toEqual(["hello"]);
   });
 
   it("reads arguments when the TypeScript runner omits the entry path", () => {
@@ -23,9 +25,7 @@ describe("parseClientArguments", () => {
   });
 
   it("extracts --url without including it in the prompt", () => {
-    expect(
-      parseClientArguments(["--url", "http://custom.test", "hello"], "http://default.test"),
-    ).toEqual({
+    expect(parseClientArguments(["--url", "http://custom.test", "hello"], "http://default.test")).toEqual({
       serverUrl: "http://custom.test",
       initialPrompt: "hello",
     });

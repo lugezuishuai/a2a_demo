@@ -9,10 +9,12 @@ import {
   type LangGraphRunnableConfig,
 } from "@langchain/langgraph";
 
+import { extractLangChainStreamText } from "./langchain-stream-helpers.js";
+
 /**
  * 封装 Server 侧单模型对话图，并通过 contextId 保存多轮消息历史。
  */
-export class LangGraphAgent {
+export class ServerAgent {
   private readonly graph: ReturnType<typeof buildConversationGraph>;
 
   /**
@@ -33,7 +35,11 @@ export class LangGraphAgent {
    * @param signal - 可选取消信号，由 A2A Executor 传入。
    * @returns 模型生成的非空最终文本。
    */
-  async respond(prompt: string, contextId: string, signal?: AbortSignal): Promise<string> {
+  async respond(
+    prompt: string,
+    contextId: string,
+    signal?: AbortSignal,
+  ): Promise<string> {
     // 使用 thread_id 将同一 A2A context 的消息存入 MemorySaver。
     const result = await this.graph.invoke(
       { messages: [new HumanMessage(prompt)] },
@@ -43,8 +49,44 @@ export class LangGraphAgent {
       },
     );
     const text = result.messages.at(-1)?.text.trim();
-    if (!text) throw new Error("The configured model returned an empty text response");
+    if (!text)
+      throw new Error("The configured model returned an empty text response");
     return text;
+  }
+
+  /**
+   * 在指定会话中流式执行一轮 Server Agent 对话。
+   *
+   * @param prompt - 用户或 Client Agent 转发的文本请求。
+   * @param contextId - A2A 会话标识，同时作为 LangGraph thread_id。
+   * @param signal - 可选取消信号，由 A2A Executor 传入。
+   * @yields 模型逐步生成的文本片段。
+   */
+  async *stream(
+    prompt: string,
+    contextId: string,
+    signal?: AbortSignal,
+  ): AsyncGenerator<string> {
+    const stream = await this.graph.stream(
+      { messages: [new HumanMessage(prompt)] },
+      {
+        configurable: { thread_id: contextId },
+        streamMode: "messages",
+        ...(signal ? { signal } : {}),
+      },
+    );
+    let hasTextChunk = false;
+
+    // LangGraph messages stream 会返回模型消息 chunk；这里只向 A2A 层暴露纯文本片段。
+    for await (const chunk of stream) {
+      const text = extractLangChainStreamText(chunk);
+      if (!text) continue;
+      hasTextChunk = true;
+      yield text;
+    }
+
+    if (!hasTextChunk)
+      throw new Error("The configured model returned an empty text stream");
   }
 }
 

@@ -10,9 +10,12 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "client": "tsx src/client-entry.ts",
+    "client:async": "tsx src/client-async-entry.ts",
     "dev": "tsx watch src/server-entry.ts",
     "doctor": "tsx src/doctor.ts",
     "env:init": "tsx scripts/init-env.ts",
+    "format": "prettier \"{src,tests,scripts}/**/*.ts\" \"*.{json,mjs}\" --write",
+    "format:check": "prettier \"{src,tests,scripts}/**/*.ts\" \"*.{json,mjs}\" --check",
     "start": "tsx src/server-entry.ts",
     "test": "vitest run"
   },
@@ -29,6 +32,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.2",
+    "prettier": "^3.9.6",
     "tsx": "^4.23.9",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
