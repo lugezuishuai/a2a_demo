@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "A2A: Wait for Server",
+      "type": "process",
+      "command": "node",
+      "args": ["--import", "tsx", "${workspaceFolder}/scripts/wait-for-server.ts"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
