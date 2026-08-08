@@ -12,6 +12,7 @@ import {
   createUserMessage,
   normalizeStreamResponse,
 } from "./client.js";
+import { ServerAgentClient } from "./client-agent.js";
 
 const PUSH_CALLBACK_PATH = "/a2a/push";
 const PUSH_TOKEN_HEADER = "X-A2A-Notification-Token";
@@ -56,8 +57,13 @@ export async function startA2AAsyncDemoClient(
 ): Promise<A2AAsyncDemoClientRuntime> {
   const app = express();
   const server = await listen(app, host, port);
-  const callbackUrl = options.callbackUrl ?? resolveLocalCallbackUrl(server, host);
-  const client = new A2AAsyncDemoClient(serverUrl, { ...options, callbackUrl }, app);
+  const callbackUrl =
+    options.callbackUrl ?? resolveLocalCallbackUrl(server, host);
+  const client = new A2AAsyncDemoClient(
+    serverUrl,
+    { ...options, callbackUrl },
+    app,
+  );
 
   return {
     client,
@@ -69,7 +75,7 @@ export async function startA2AAsyncDemoClient(
 /**
  * 使用 A2A push notification 方式发送任务，并通过本地 webhook 等待最终结果。
  */
-export class A2AAsyncDemoClient {
+export class A2AAsyncDemoClient implements ServerAgentClient {
   private readonly factory;
   private readonly pendingByToken = new Map<string, PendingPushRequest>();
 
@@ -99,7 +105,9 @@ export class A2AAsyncDemoClient {
     const client = await this.factory.createFromUrl(this.serverUrl);
     const token = randomUUID();
     const pendingResult = this.createPendingRequest(token);
-    const request = createSendMessageRequest(createUserMessage(prompt, contextId));
+    const request = createSendMessageRequest(
+      createUserMessage(prompt, contextId),
+    );
     request.configuration = {
       acceptedOutputModes: ["text/plain", "task-status"],
       taskPushNotificationConfig: {
@@ -114,11 +122,16 @@ export class A2AAsyncDemoClient {
       returnImmediately: true,
     };
 
+    // 发送同步请求，等待首个 Task 创建响应。后续通过 push webhook 回填。
     const firstResult = await client.sendMessage(request);
     if ("id" in firstResult) {
       this.updatePendingIdentity(token, firstResult.id, firstResult.contextId);
     } else {
-      this.updatePendingIdentity(token, firstResult.taskId, firstResult.contextId);
+      this.updatePendingIdentity(
+        token,
+        firstResult.taskId,
+        firstResult.contextId,
+      );
     }
 
     return pendingResult;
@@ -138,7 +151,9 @@ export class A2AAsyncDemoClient {
       return;
     }
 
-    const event = normalizeStreamResponse(StreamResponse.fromJSON(request.body));
+    const event = normalizeStreamResponse(
+      StreamResponse.fromJSON(request.body),
+    );
     if (event) this.applyEvent(pending, event);
     response.status(202).json({ status: "accepted" });
   }
@@ -153,7 +168,11 @@ export class A2AAsyncDemoClient {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingByToken.delete(token);
-        reject(new Error(`Timed out waiting for A2A push result after ${this.options.timeoutMs}ms`));
+        reject(
+          new Error(
+            `Timed out waiting for A2A push result after ${this.options.timeoutMs}ms`,
+          ),
+        );
       }, this.options.timeoutMs);
       this.pendingByToken.set(token, {
         token,
@@ -175,7 +194,11 @@ export class A2AAsyncDemoClient {
    * @param taskId - Server 创建或复用的 A2A 任务标识。
    * @param contextId - Server 创建或复用的 A2A 会话标识。
    */
-  private updatePendingIdentity(token: string, taskId: string, contextId: string): void {
+  private updatePendingIdentity(
+    token: string,
+    taskId: string,
+    contextId: string,
+  ): void {
     const pending = this.pendingByToken.get(token);
     if (!pending) return;
     pending.taskId = taskId || pending.taskId;
@@ -233,7 +256,11 @@ function isTerminalState(state: TaskState): boolean {
  * @param port - 监听端口。
  * @returns 已处于 listening 状态的 HTTP Server。
  */
-async function listen(app: Express, host: string, port: number): Promise<Server> {
+async function listen(
+  app: Express,
+  host: string,
+  port: number,
+): Promise<Server> {
   const server = app.listen(port, host);
   await once(server, "listening");
   return server;

@@ -3,6 +3,7 @@ import { Role, TaskState, type Message, type SendMessageRequest, type StreamResp
 import { randomUUID } from "node:crypto";
 
 import { extractMessageText, extractPartsText, textPart } from "./a2a-helpers.js";
+import { ServerAgentClient } from "./client-agent.js";
 
 export interface ClientEvent {
   kind: "message" | "task" | "statusUpdate" | "artifactUpdate";
@@ -75,7 +76,7 @@ export function createSendMessageRequest(message: Message): SendMessageRequest {
 /**
  * 封装 Agent Card 发现、JSON-RPC 传输和流式事件归一化的底层 A2A Client。
  */
-export class A2ADemoClient {
+export class A2ADemoClient implements ServerAgentClient {
   private readonly factory: ClientFactory;
 
   /**
