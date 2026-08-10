@@ -17,6 +17,7 @@
     "format": "prettier \"{src,tests,scripts}/**/*.ts\" \"*.{json,mjs}\" --write",
     "format:check": "prettier \"{src,tests,scripts}/**/*.ts\" \"*.{json,mjs}\" --check",
     "start": "tsx src/server-entry.ts",
+    "studio:client": "npx -y @langchain/langgraph-cli dev --no-browser",
     "test": "vitest run"
   },
   "dependencies": {

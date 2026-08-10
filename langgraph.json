@@ -1,0 +1,8 @@
+{
+  "node_version": "20",
+  "dependencies": ["."],
+  "graphs": {
+    "client_agent": "./src/client-agent-studio.ts:graph"
+  },
+  "env": ".env"
+}

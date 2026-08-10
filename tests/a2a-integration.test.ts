@@ -43,6 +43,7 @@ it("completes a real A2A discovery and streaming round trip", async () => {
     pushPublicUrl: "http://127.0.0.1:0",
     pushTimeoutMs: 1_000,
     logLevel: "error",
+    langSmithProject: "a2a_demo_client",
   };
   const graphAgent = new ServerAgent(new FakeListChatModel({ responses: ["pong from A2A"] }), "Be useful.");
   const runtime = createA2AServer(config, new LangGraphAgentExecutor(graphAgent));
@@ -79,6 +80,7 @@ it("completes a real A2A push notification round trip", async () => {
     pushPublicUrl: "http://127.0.0.1:0",
     pushTimeoutMs: 1_000,
     logLevel: "error",
+    langSmithProject: "a2a_demo_client",
   };
   const graphAgent = new ServerAgent(new FakeListChatModel({ responses: ["pong from push"] }), "Be useful.");
   const runtime = createA2AServer(config, new LangGraphAgentExecutor(graphAgent));

@@ -61,6 +61,34 @@ npm run client
 npm run client -- --url http://127.0.0.1:10000 "hello"
 ```
 
+### LangSmith Studio
+
+项目已按 LangGraph JavaScript 应用结构配置 `langgraph.json`，Studio 会加载
+`client_agent` 图并通过同一个 `.env` 复用 `LANGSMITH_API_KEY`。Client Agent 的 traces
+仍写入固定项目 `a2a_demo_client`。
+
+先启动 A2A Server，确保 Studio 中的 `delegate_to_server_agent` 工具可以连到远端 Server Agent：
+
+```bash
+npm run dev
+```
+
+另开终端启动 LangGraph 本地 Agent Server：
+
+```bash
+npm run studio:client
+```
+
+命令就绪后会输出本地 API 地址和 Studio Web UI 链接，默认类似：
+
+```text
+API: http://localhost:2024
+Studio Web UI: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
+```
+
+在 Studio 中选择 assistant `client_agent`。图入口在 `src/client-agent-studio.ts`，它会关闭图内
+`MemorySaver`，让 LangGraph Agent Server 接管线程状态与 human-in-the-loop interrupt 恢复。
+
 ### 异步推送模式
 
 同步命令 `npm run client` 使用 `sendMessageStream` 在同一条请求连接上消费 A2A 事件，
@@ -117,6 +145,7 @@ src/
   config.ts               环境变量解析与校验
   model-factory.ts        OpenAI / DeepSeek / Claude 模型工厂
   client-agent.ts         Client LangGraph Agent 与 A2A 委派工具
+  client-agent-studio.ts  LangSmith Studio 专用 Client Agent 图导出
   client-arguments.ts     Client CLI 参数解析
   langgraph-executor.ts   LangGraph 到 A2A task lifecycle 的适配
   langchain-stream-helpers.ts
@@ -130,6 +159,7 @@ src/
   client-async-entry.ts   单次/交互式异步 Client 入口
   a2a-helpers.ts          A2A Message / Part 文本辅助函数
   doctor.ts               本地配置诊断入口
+langgraph.json            LangGraph CLI / LangSmith Studio 本地配置
 tests/
   a2a-integration.test.ts  真实本地协议闭环测试
   client-agent.test.ts     Client Agent 语义路由测试

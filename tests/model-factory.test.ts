@@ -23,6 +23,7 @@ const baseConfig: AppConfig = {
   pushPublicUrl: "http://127.0.0.1:10001",
   pushTimeoutMs: 120_000,
   logLevel: "error",
+  langSmithProject: "a2a_demo_client",
 };
 
 describe("createChatModel", () => {

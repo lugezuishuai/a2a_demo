@@ -43,6 +43,7 @@ const environmentSchema = z.object({
   A2A_PUSH_PUBLIC_URL: optionalUrl,
   A2A_PUSH_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
+  LANGSMITH_API_KEY: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   DEEPSEEK_API_KEY: z.string().min(1).optional(),
@@ -70,6 +71,9 @@ export interface AppConfig {
   pushPublicUrl: string;
   pushTimeoutMs: number;
   logLevel: "error" | "warn" | "info" | "debug";
+  langSmithApiKey?: string;
+  /** Client Agent 的 LangSmith 追踪项目名，固定使用该值。 */
+  langSmithProject: "a2a_demo_client";
 }
 
 export interface LoadConfigOptions {
@@ -121,6 +125,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env, options
     pushPublicUrl,
     pushTimeoutMs: parsed.A2A_PUSH_TIMEOUT_MS,
     logLevel: parsed.LOG_LEVEL,
+    ...(parsed.LANGSMITH_API_KEY ? { langSmithApiKey: parsed.LANGSMITH_API_KEY } : {}),
+    langSmithProject: "a2a_demo_client",
   };
 }
 
